@@ -18,7 +18,7 @@ const partials = {
 
 partials.operators = Object.keys(partials).map(op => `{{#${op}}}{{>${op}}}{{/${op}}}`).concat()
 
-const noop = (id) => { return id }
+const identity = (id) => { return id }
 
 const curry = (fn, ...fixed) => {
   return (...rest) => {
@@ -77,7 +77,7 @@ export default (db) => {
   let accessor = (obj) => {
     return Promise
       .resolve(obj)
-      .then(validate.write || noop)
+      .then(validate.write || identity)
       .then(curry(pack, accessor.table(), accessor.index(), accessor.encode()))
       .then(curry(render, 'INSERT INTO {{{table}}} ({{{keys}}}) VALUES ({{values}})'))
       .then(run(db))
@@ -91,6 +91,7 @@ export default (db) => {
       .then(curry(render, 'SELECT * FROM {{{table}}} WHERE id = {{id}}'))
       .then(promisify(db, 'get'))
       .then(curry(unpack, accessor.decode()))
+      .then(validate.read || identity)
   }
 
   accessor.table = (value) => {
@@ -131,7 +132,7 @@ export default (db) => {
 
   accessor.validate = (key, value, transform = true) => {
     if (key && value) {
-      validate[key] = transform ? promisify(value) : value
+      validate[key] = transform ? promisify(value, 'validate') : value
       return accessor
     } else if (key) {
       return validate[key]
