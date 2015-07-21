@@ -1,15 +1,15 @@
 import joi from 'joi'
 import sqlite from 'sqlite3'
 import { expect } from 'chai'
-import createAccessor from '../src/index'
+import createAccessor from '../index'
 
 describe('accessor', () => {
   let db, foobar
 
   beforeEach((done) => {
     db = new sqlite.Database(':memory:')
-    db.exec('CREATE TABLE foobar ( id INTEGER PRIMARY KEY AUTOINCREMENT, value TEXT, number INTEGER, blob BLOB )', done)
     foobar = createAccessor(db).table('foobar').index('value').index('number')
+    db.exec('CREATE TABLE foobar ( id INTEGER PRIMARY KEY AUTOINCREMENT, value TEXT, number INTEGER, blob BLOB )', done)
   })
 
   afterEach((done) => {
