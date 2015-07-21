@@ -3,12 +3,12 @@ import init from 'msgpack5'
 
 const msgpack = init()
 
-const partials = {
+let partials = {
   $eq   : '= {{value}}'
 , $gt   : '> {{value}}'
 , $gte  : '>= {{value}}'
-, $lt   : '<'
-, $lte  : '<='
+, $lt   : '< {{value}}'
+, $lte  : '<= {{value}}'
 , $ne   : '!= {{value}}'
 , $in   : 'IN ({{value}})'
 , $nin  : 'NOT IN ({{value}})'
@@ -16,9 +16,14 @@ const partials = {
 , $nlike: 'NOT LIKE {{value}}'
 }
 
-partials.operators = Object.keys(partials).map(op => `{{#${op}}}{{>${op}}}{{/${op}}}`).concat()
-
+partials.operators = Object.keys(partials).map(op => `{{#${op}}}{{>${op}}}{{/${op}}}`).join('')
 const identity = (id) => { return id }
+
+const map = (fn) => {
+  return (list) => {
+    return list.map(fn)
+  }
+}
 
 const curry = (fn, ...fixed) => {
   return (...rest) => {
@@ -68,6 +73,32 @@ const unpack = (decode, obj = {}) => {
   return decode(obj.blob || obj)
 }
 
+// http://docs.mongodb.org/manual/reference/operator/query/
+const rewrite = (table) => {
+  return (obj) => {
+    let conditions = []
+    let previous
+    Object.keys(obj).forEach((key) => {
+      const value = obj[key]
+      const push = (d) => {
+        if (previous) { previous.next = d }
+        conditions.push(d)
+        previous = d
+      }
+      if (typeof value === 'object') {
+        Object.keys(value).forEach((op) => {
+          let o = { key, value: value[op] }
+          o[op] = true
+          push(o)
+        })
+      } else {
+        push({ key, value, $eq: true })
+      }
+    })
+    return { table, conditions }
+  }
+}
+
 export default (db) => {
   let validate = {}
   let index = {}
@@ -92,6 +123,26 @@ export default (db) => {
       .then(promisify(db, 'get'))
       .then(curry(unpack, accessor.decode()))
       .then(validate.read || identity)
+  }
+
+  accessor.find = (obj) => {
+    return Promise
+      .resolve(obj)
+      .then(rewrite(accessor.table()))
+      .then(d => render(`SELECT * FROM {{{table}}} WHERE {{#conditions}}{{{key}}} {{>operators}}{{#next}} AND {{/next}}{{/conditions}}`, d, partials))
+      .then(promisify(db, 'get'))
+      .then(curry(unpack, accessor.decode()))
+      .then(validate.read || identity)
+  }
+
+  accessor.findAll = (obj) => {
+    return Promise
+      .resolve(obj)
+      .then(rewrite(accessor.table()))
+      .then(d => render(`SELECT * FROM {{{table}}} WHERE {{#conditions}}{{{key}}} {{>operators}}{{#next}} AND {{/next}}{{/conditions}}`, d, partials))
+      .then(promisify(db, 'all'))
+      .then(map(curry(unpack, accessor.decode())))
+      .then(map(validate.read || identity))
   }
 
   accessor.table = (value) => {
