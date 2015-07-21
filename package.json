@@ -1,0 +1,39 @@
+{
+  "name": "msglite",
+  "version": "0.0.0",
+  "description": "embedded, indexed, schemaless, document store",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "mocha"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hden/msglite.git"
+  },
+  "keywords": [
+    "msgpack",
+    "sqlite",
+    "nosql"
+  ],
+  "author": "Hao-kang Den <haokang.den@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/hden/msglite/issues"
+  },
+  "homepage": "https://github.com/hden/msglite",
+  "dependencies": {
+    "curry": "^1.2.0",
+    "msgpack5": "^3.0.0",
+    "mustache-sql": "^0.1.0"
+  },
+  "devDependencies": {
+    "babel": "^5.6.23",
+    "chai": "^3.2.0",
+    "eslint": "^0.24.1",
+    "mocha": "^2.2.5",
+    "sqlite3": "^3.0.9"
+  }
+}
